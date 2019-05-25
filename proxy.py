@@ -39,10 +39,16 @@ class threadClientProxy(Thread):
                 data = self.connexion_client.recv(buffer_size)
                 if (len(data) > 0):
                     m = mqttMessage.decode_message(data)
-                    print('SOURCE: {0},  {1}'.format(self.addr_client,
-                                                     m))
-                    b = True
-                    # TODO ################
+
+                    print(
+                        'SOURCE: {0},  {1}'.format(
+                            self.addr_client,
+                            m
+                        )
+                    )
+
+                    m_valid = True
+
                     if (m.message_type == mqttMessage.PUBLISH):
                         mqsec_message = mqsec.mqsecModel(
                             m.time,
@@ -51,22 +57,20 @@ class threadClientProxy(Thread):
                             m.topic,
                             m.payload,
                             'mes')
-                        b = mqsec_message.check_event()
+                        m_valid = mqsec_message.check_event()
 
                     elif (m.message_type == mqttMessage.SUBSCRIBE):
-                        # A subscribe message is send only if all
-                        # the topic of the topiclist are valid
+                        # A subscribe message is trnsmited only if all
+                        # the topic of the topic_list are valid
                         for t in (m.topic_list):
                             mqsec_message = mqsec.mqsecModel(
                                 m.time,
                                 'subscribe',
                                 self.client_id,
                                 t['topic_filter'])
-                            b = b and mqsec_message.check_event()
+                            m_valid = m_valid and mqsec_message.check_event()
 
-                    # ###########
-
-                    if b:
+                    if m_valid:
                         self.socket_server.send(data)
 
                     if (m.message_type == mqttMessage.DISCONNECT):
@@ -79,6 +83,10 @@ class threadClientProxy(Thread):
             self.connexion_client.close()
             self.socket_server.close()
             sys.exit(1)
+        except KeyboardInterrupt:
+            print("\n[*] User Requested an interupt")
+            print("[*] Apllication Exiting ...")
+            sys.exit()
 
 
 class threadProxyServer(Thread):
@@ -109,29 +117,50 @@ class threadProxyServer(Thread):
         self.client_id = mqtt_message.client_id
 
     def run(self):
-        # listen for message from the server and transmit them to the client
+        # Listen for message from the server and transmit them to the client
         try:
+            # Open the socket with the server
             socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             socket_server.connect((ADDR_MQTT_BROKER, MQTT_BROKER_PORT))
             socket_server.send(self.data)
 
+            # Create a thread_client
             thread_client = threadClientProxy(
                 self.connection_client,
                 self.addr_client,
                 socket_server,
                 self.client_id)
             thread_client.start()
+            
             while 1:
                 # Read reply or data to from end web server
                 reply = socket_server.recv(buffer_size)
 
                 if (len(reply) > 0):
-                    mqtt_message = mqttMessage.decode_message(reply)
-                    print('SOURCE: ({0},{1}),  {2}'.format(ADDR_MQTT_BROKER,
-                                                           MQTT_BROKER_PORT,
-                                                           mqtt_message))
+                    m = mqttMessage.decode_message(reply)
+                    print('&&&&&SOURCE: ({0},{1}),  {2}'
+                          .format(
+                              ADDR_MQTT_BROKER,
+                              MQTT_BROKER_PORT,
+                              m
+                          )
+                          )
+
+                    m_valid = True
+
+                    if (m.message_type == mqttMessage.PUBLISH):
+                        mqsec_message = mqsec.mqsecModel(
+                            m.time,
+                            'publish',
+                            self.client_id,
+                            m.topic,
+                            m.payload,
+                            'mes')
+                        m_valid = mqsec_message.check_event()
+
                     # send reply back to the client
-                    self.connection_client.send(reply)
+                    if m_valid:
+                        self.connection_client.send(reply)
 
             socket_server.close()
             self.connection_client.close()
@@ -140,6 +169,10 @@ class threadProxyServer(Thread):
             socket_server.close()
             self.connection_client.close()
             sys.exit(1)
+        except KeyboardInterrupt:
+            print("\n[*] User Requested an interupt")
+            print("[*] Apllication Exiting ...")
+            sys.exit()
 
 
 def start():

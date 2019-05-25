@@ -295,22 +295,22 @@ def connect(data):
     a = byte_message.next()
     if (chr(a) != 'Q'):
         return
-    # a = byte_message.next()
-    # if (chr(a) != 'T'):
-    #     return
-    # a = byte_message.next()
-    # if (chr(a) != 'T'):
-    #     return
+    a = byte_message.next()
+    if (chr(a) != 'T'):
+        return
+    a = byte_message.next()
+    if (chr(a) != 'T'):
+        return
 
     # MQIsdp
 
-    if (
-        chr(byte_message.next()) != 'I' or
-        chr(byte_message.next()) != 's' or
-        chr(byte_message.next()) != 'd' or
-        chr(byte_message.next()) != 'p'
-       ):
-        return
+    # if (
+    #     chr(byte_message.next()) != 'I' or
+    #     chr(byte_message.next()) != 's' or
+    #     chr(byte_message.next()) != 'd' or
+    #     chr(byte_message.next()) != 'p'
+    #    ):
+    #     return
 
     m.protocol_level = byte_message.next()
     connect_flag = byte_message.next()
@@ -374,4 +374,4 @@ def decode_message(data):
     return handle_message_type(message_type, data)
 
 
-#decode_message(data)
+# decode_message(data)
