@@ -24,3 +24,7 @@ __pycache__/mqtt_message\.cpython-37\.pyc
 
 rule\.ttl
 >>>>>>> Stashed changes
+
+__pycache__/mqsec\.cpython-37\.pyc
+
+__pycache__/mqttMessage\.cpython-37\.pyc
