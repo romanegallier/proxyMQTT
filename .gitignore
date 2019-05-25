@@ -1,4 +1,5 @@
 
+<<<<<<< Updated upstream
 __pycache__/commRest\.cpython-35\.pyc
 
 __pycache__/decodage_mqqt\.cpython-35\.pyc
@@ -10,3 +11,16 @@ __pycache__/mqsecModel\.cpython-35\.pyc
 __pycache__/mqtt_message\.cpython-35\.pyc
 
 events/
+=======
+\.vscode/settings\.json
+
+__pycache__/arbres\.cpython-37\.pyc
+
+__pycache__/decodage_mqqt\.cpython-35\.pyc
+
+__pycache__/decodage_mqqt\.cpython-37\.pyc
+
+__pycache__/mqtt_message\.cpython-37\.pyc
+
+rule\.ttl
+>>>>>>> Stashed changes
