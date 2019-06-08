@@ -28,3 +28,13 @@ rule\.ttl
 __pycache__/mqsec\.cpython-37\.pyc
 
 __pycache__/mqttMessage\.cpython-37\.pyc
+
+__pycache__/ruleFile\.cpython-37\.pyc
+
+__pycache__/topicTree\.cpython-37\.pyc
+
+__pycache__/benchmark\.cpython-37\.pyc
+
+myLogFile
+
+topicTree\.txt

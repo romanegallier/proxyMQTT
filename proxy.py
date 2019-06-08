@@ -5,6 +5,7 @@ from threading import Thread
 import sys
 import mqttMessage
 import mqsec
+import ruleFile
 
 LISTENING_PORT = 1885
 MQTT_BROKER_PORT = 1884
@@ -26,12 +27,13 @@ class threadClientProxy(Thread):
 
     '''
     def __init__(self, connexion_client, addr_client,
-                 socket_server, client_id):
+                 socket_server, client_id, pdp):
         Thread.__init__(self)
         self.connexion_client = connexion_client
         self.addr_client = addr_client
         self.socket_server = socket_server
         self.client_id = client_id
+        self.pdp = pdp
 
     def run(self):
         try:
@@ -50,17 +52,17 @@ class threadClientProxy(Thread):
                     m_valid = True
 
                     if (m.message_type == mqttMessage.PUBLISH):
-                        mqsec_message = mqsec.mqsecModel(
+                        mqsec_message = mqsec.mqsecPepEvent(
                             m.time,
                             'publish',
                             self.client_id,
                             m.topic,
                             m.payload,
                             'mes')
-                        m_valid = mqsec_message.check_event()
+                        m_valid = self.pdp.submit_event(mqsec_message)
 
                     elif (m.message_type == mqttMessage.SUBSCRIBE):
-                        # A subscribe message is trnsmited only if all
+                        # A subscribe message is transmited only if all
                         # the topic of the topic_list are valid
                         for t in (m.topic_list):
                             mqsec_message = mqsec.mqsecModel(
@@ -68,10 +70,15 @@ class threadClientProxy(Thread):
                                 'subscribe',
                                 self.client_id,
                                 t['topic_filter'])
-                            m_valid = m_valid and mqsec_message.check_event()
+                            m_valid = m_valid and self.pdp.submit_event(
+                                mqsec_message
+                            )
 
                     if m_valid:
                         self.socket_server.send(data)
+                    else:
+                        # TODO
+                        pass
 
                     if (m.message_type == mqttMessage.DISCONNECT):
                         break
@@ -100,7 +107,7 @@ class threadProxyServer(Thread):
         :param addr_client: Adress of the client (ip, port)
     '''
 
-    def __init__(self, connection_client, data, addr_client):
+    def __init__(self, connection_client, data, addr_client, pdp):
         Thread.__init__(self)
 
         mqtt_message = mqttMessage.decode_message(data)
@@ -115,11 +122,13 @@ class threadProxyServer(Thread):
         self.data = data
         self.addr_client = addr_client
         self.client_id = mqtt_message.client_id
+        self.pdp = pdp
 
     def run(self):
         # Listen for message from the server and transmit them to the client
         try:
-            # Open the socket with the server
+            # Open the socket with the server  #TODO metre a try juste pour ca 
+            # et si ca marche c'est echec connexion broker
             socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             socket_server.connect((ADDR_MQTT_BROKER, MQTT_BROKER_PORT))
             socket_server.send(self.data)
@@ -129,7 +138,8 @@ class threadProxyServer(Thread):
                 self.connection_client,
                 self.addr_client,
                 socket_server,
-                self.client_id)
+                self.client_id,
+                self.pdp)
             thread_client.start()
             
             while 1:
@@ -138,7 +148,7 @@ class threadProxyServer(Thread):
 
                 if (len(reply) > 0):
                     m = mqttMessage.decode_message(reply)
-                    print('&&&&&SOURCE: ({0},{1}),  {2}'
+                    print('&SOURCE: ({0},{1}),  {2}'
                           .format(
                               ADDR_MQTT_BROKER,
                               MQTT_BROKER_PORT,
@@ -152,11 +162,11 @@ class threadProxyServer(Thread):
                         mqsec_message = mqsec.mqsecModel(
                             m.time,
                             'publish',
-                            self.client_id,
+                            'broker',
                             m.topic,
                             m.payload,
                             'mes')
-                        m_valid = mqsec_message.check_event()
+                        m_valid = self.pdp.submit_event(mqsec_message)
 
                     # send reply back to the client
                     if m_valid:
@@ -177,6 +187,9 @@ class threadProxyServer(Thread):
 
 def start():
     """ Fonction that start the proxy and display the message received"""
+    policy_decision_point = mqsec.PolicyDecisionPoint()
+    r = policy_decision_point.submit_policy(ruleFile.FILE_NAME)
+    
     try:
         # Start listening on the listening_port for client request
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -198,7 +211,9 @@ def start():
             thread_server = threadProxyServer(
                 connexion_client,
                 data,
-                addr_client)
+                addr_client,
+                policy_decision_point
+            )
             thread_server.start()
 
         except KeyboardInterrupt:
